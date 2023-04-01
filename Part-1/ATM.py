@@ -1,11 +1,11 @@
 import sys, argparse
-from pysyncobj import SyncObj
+from pysyncobj import SyncObj, SyncObjConf
 from pysyncobj.batteries import ReplCounter, ReplDict
 
 server = "localhost"
 
 class Switch_Case:
-    def run(self, data, choice):
+    def run(self, syncObj, data, choice):
         default = "Incorrect input"
         try:
             if int(choice) < 0 or int(choice) > 5:
@@ -16,48 +16,55 @@ class Switch_Case:
 
         user_id = input("Enter user ID:")
         if data.get(user_id) == None:
-            data.set(user_id, 0, sync=True)
+            data.set(user_id, 0, sync=False)
 
-        return getattr(self, 'case_' + choice)(data, user_id)
+        return getattr(self, 'case_' + choice)(syncObj, data, user_id)
  
-    def case_1(self, data, user_id):
+    def case_1(self, syncObj, data, user_id):
         amt = int(input("Enter amount to be withdrawn:"))
 
         if data.get(user_id) >= amt:
-            data.set(user_id, data.get(user_id) - amt, sync=True)
+            data.set(user_id, data.get(user_id) - amt, sync=False)
             return "Success"
         return "Failure"
  
-    def case_2(self, data, user_id):
+    def case_2(self, syncObj, data, user_id):
         amt = int(input("Enter amount to deposit:"))
-        data.set(user_id, data.get(user_id) + amt, sync=True)
+        data.set(user_id, data.get(user_id) + amt, sync=False)
         return "Success"
  
-    def case_3(self, data, user_id):
+    def case_3(self, syncObj, data, user_id):
         return data.get(user_id)
     
-    def case_4(self, data, user_id):
+    def case_4(self, syncObj, data, user_id):
         amt = int(input("Enter amount to be transferred:"))
 
         if data.get(user_id) >= amt:
             user_2 = input("Enter beneficiary user ID:")
             if data.get(user_2) == None:
-                data.set(user_2, 0, sync=True)
+                data.set(user_2, 0, sync=False)
 
-            data.set(user_id, data.get(user_id) - amt, sync=True)
-            data.set(user_2, data.get(user_2) + amt, sync=True)
+            data.set(user_id, data.get(user_id) - amt, sync=False)
+            data.set(user_2, data.get(user_2) + amt, sync=False)
             return "Success"
         
         return "Failure"
+    
+    def case_5(self, syncObj, data, user_id):
+        new_node = input("Enter new node address:")
+        syncObj.addNodeToCluster(server+":"+new_node)
+        return "Success"
 
-    def case_5(self, data, user_id):
+    def case_6(self, syncObj, data, user_id):
         sys.exit()
 
 def ATM(args, cnt, data):
     other_nodes = []
     for i in args.seed_nodes:
         other_nodes.append(server+":"+i)
-    return SyncObj(server+":"+args.self_addr, other_nodes, consumers=[cnt, data])
+
+    conf = SyncObjConf(dynamicMembershipChange=True)
+    return SyncObj(server+":"+args.self_addr, other_nodes, consumers=[cnt, data], conf=conf)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -75,11 +82,12 @@ def main():
         print("2. Deposit")
         print("3. Balance inquiry")
         print("4. Transfer to other account")
-        print("5. Exit")
+        print("5. Add new node")
+        print("6. Exit")
         ch = input()
 
         switch = Switch_Case()
-        print(switch.run(data, ch))
+        print(switch.run(syncObj, data, ch))
 
 if __name__ == '__main__':
     main()
