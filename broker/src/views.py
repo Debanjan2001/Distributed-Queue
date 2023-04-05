@@ -26,15 +26,15 @@ class HeartbeatAPI(Resource):
             "status": "Success",
         }, HTTP_200_OK
     
-class RAFTStatusAPI(Resource):
-    def get(self):
-        return {
-            "status": "Success",
-            "raft_status": get_raft_status()
-        }, HTTP_200_OK
+# class RAFTStatusAPI(Resource):
+#     def get(self):
+#         return {
+#             "status": "Success",
+#             "raft_status": get_raft_status()
+#         }, HTTP_200_OK
     
 
-class BrokerAPI(Resource):
+class MessageAPI(Resource):
     def get(self):
         parser = reqparse.RequestParser()
         parser.add_argument('topic_name', type=str, required=True)
@@ -92,12 +92,14 @@ class BrokerAPI(Resource):
             "status": "Success",
         }, HTTP_201_CREATED
     
-class AddPartition(Resource):
+class PartitionAPI(Resource):
+    # Add partition to broker
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument('--partition_id', required=True)
-        parser.add_argument('--raft_host', required=True)
-        parser.add_argument('--partners', nargs='+')
+        parser.add_argument('topic_name', required=True)
+        parser.add_argument('partition_id', required=True)
+        parser.add_argument('raft_host', required=True)
+        parser.add_argument('raft_partners', required=True, multiple=True)
         args = parser.parse_args()
 
         sync_obj, data_list = create_app(args.raft_host, args.partners)
@@ -107,18 +109,18 @@ class AddPartition(Resource):
             "status": "Success",
         }, HTTP_201_CREATED
 
-class AddBroker(Resource):
-    def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('broker_ip', type=str, required=True)
-        parser.add_argument('broker_port', type=str, required=True)
-        args = parser.parse_args()
+# class AddBroker(Resource):
+#     def post(self):
+#         parser = reqparse.RequestParser()
+#         parser.add_argument('broker_ip', type=str, required=True)
+#         parser.add_argument('broker_port', type=str, required=True)
+#         args = parser.parse_args()
 
-        return {
-            "status": "Success",
-        }, HTTP_201_CREATED
+#         return {
+#             "status": "Success",
+#         }, HTTP_201_CREATED
 
 api.add_resource(HeartbeatAPI, "/")
-api.add_resource(RAFTStatusAPI, "/raft_status")
-api.add_resource(BrokerAPI, "/logs")
-api.add_resource(AddPartition, "/partitions")
+# api.add_resource(RAFTStatusAPI, "/raft_status")
+api.add_resource(MessageAPI, "/logs")
+api.add_resource(PartitionAPI, "/partitions")
