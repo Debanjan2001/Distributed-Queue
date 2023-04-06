@@ -4,22 +4,21 @@ from typing import List
 from flask import Flask
 import threading
 from src.raft import (
-    create_sync_obj, 
-    get_sync_obj,
-    get_distributed_objs
+    PartitionDict
 )
 
-def create_app(raft_host: str, partners: List[str]):
+def create_app():
     # for development purposes only
     logging.basicConfig(level=logging.DEBUG, force=True)
 
-    create_sync_obj(raft_host, partners)
-    sync_obj = get_sync_obj()
-    data_list = get_distributed_objs()
+    app = Flask(__name__)
 
     def sigint_handler(signum, frame):
-        sync_obj.destroy()
+        # partitions = get_partitions()
+        # for partition_raft in partitions.get_partitions():
+        #     print("Destroying")
+        #     partition_raft.destroy()
         exit(0)
 
     signal.signal(signal.SIGINT, sigint_handler)
-    return sync_obj, data_list
+    return app
