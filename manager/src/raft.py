@@ -72,6 +72,7 @@ def add_broker(broker_addr: str) -> bool:
 # Functions for topic_dict
 def add_topic(topic_name: str):
     topic_dict = get_topic_dict()
+    
     if topic_name in topic_dict:
         raise Exception(f'Topic {topic_name} already exists')
     
@@ -90,6 +91,15 @@ def add_broker_to_topic_partition(topic_name: str, partition_id: int, broker_id:
         raise Exception(f'Broker id {broker_id} already added for topic name {topic_name}.')
     
     topic_dict[topic_name][partition_id].add(broker_id)
+
+def get_brokers_for_topic_partition(topic_name: str, partition_id: int):
+    topic_dict = get_topic_dict()
+
+    if topic_name not in topic_dict or partition_id not in topic_dict[partition_id]:
+        return None
+
+    broker_dict = get_broker_dict()
+    return [broker_dict[broker_id] for broker_id in topic_dict[topic_name][partition_id]]
 
 # Functions for producer_dict
 def add_producer(topic_name: str) -> str:
