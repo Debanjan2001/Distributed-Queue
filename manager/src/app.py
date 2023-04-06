@@ -10,11 +10,6 @@ from src.raft import (
 
 from src import views
 
-app = Flask(__name__)
-
-# This needs to imported, otherwise the api endpoints from views aren't integrated. 
-from src import views
-
 def create_app(raft_host: str, partners: List[str]):
     # for development purposes only
     logging.basicConfig(level=logging.DEBUG, force=True)
