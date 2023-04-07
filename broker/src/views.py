@@ -1,29 +1,25 @@
 from flask import Blueprint
-from src.app import create_app
 from flask_restful import (
     Resource, 
     Api, 
     reqparse,
 )
 from src.http_status_codes import *
+
 from src.raft import (
-    # get_partitions,
-    PartitionRaft,
     PartitionDict,
-    # check_status,
+    # get_partitions
 )
-
-
 
 api_bp = Blueprint('api', __name__)
 api = Api(api_bp)
 
-import threading
-
+## Export These
 partitions = PartitionDict()
-# partition_list = []
-partition = None
-# partitions = get_partitions() 
+
+def get_partitions():
+    global partitions
+    return partitions
 
 class HeartbeatAPI(Resource):
     def get(self):
@@ -100,18 +96,18 @@ class MessageAPI(Resource):
         parser = reqparse.RequestParser()
         parser.add_argument('topic_name', type=str, required=True)
         parser.add_argument('partition_id', type=int, required=True)
-        parser.add_argument('msg', type=str, required=True)
+        parser.add_argument('message', type=str, required=True)
         args = parser.parse_args()
         
         # global partitions
-        partition = partitions.get(args.topic_name, args.partition_id)
+        partition = partitions.get_partition(args.topic_name, args.partition_id)
         if partition is None:
             return {
                 "status": "Failure",
                 "reason": f"No partition with ID {args.partition_id}"
             }, HTTP_400_BAD_REQUEST
 
-        partition.add_message(args.msg)
+        partition.add_message(args.message)
         return {
             "status": "Success",
             "message": f"Message added to Partition_id = {args.partition_id} of `{args.topic_name}`"
@@ -134,18 +130,18 @@ class ConsumerAPI(Resource):
                 "reason": f"No partition with ID {args.partition_id}"
             }, HTTP_400_BAD_REQUEST
         
-        try:
-            partition.add_consumer(args.consumer_id)
-            return {
-                "status": "Success",
-                "Message": f"Consumer#{args.consumer_id} registered successfully for Topic: {args.topic_name}, Partition: {args.partition_id}"
-            }, HTTP_201_CREATED
-        except Exception as e:
+        if partition.has_consumer(args.consumer_id):
             return {
                 "status": "Failure",
-                "reason": str(e)
+                "reason": f"Consumer ID {args.consumer_id} already registered"
             }, HTTP_400_BAD_REQUEST
-    
+        
+        partition.add_consumer(args.consumer_id)
+        return {
+            "status": "Success",
+            "Message": f"Consumer#{args.consumer_id} registered successfully for Topic: {args.topic_name}, Partition: {args.partition_id}"
+        }, HTTP_201_CREATED
+
 
 class PartitionAPI(Resource):
     # Add partition to broker
@@ -176,31 +172,6 @@ class PartitionAPI(Resource):
                 "status": "Failure",
                 "reason": f"Partition {args.partition_id} already exists of topic {args.topic_name}"
             }, HTTP_400_BAD_REQUEST
-
-        # print(args)
-        
-        # partition = PartitionRaft(
-        #     raft_host=args.raft_host, 
-        #     raft_partners=args.raft_partners, 
-        #     topic_name=args.topic_name,
-        #     partition_id=args.partition_id,
-        #     replica_id=args.replica_id,
-        # )
-
-        # partition.waitBinded()
-        # partition.waitReady()
-
-        # while(True):
-        #     import time
-        #     time.sleep(0.5)
-        #     print(partition.getStatus())
-        #     print(25*"-")
-
-        # import time
-        # time.sleep(0.5)
-
-        # partitions.add_partition(partition)
-        # partition_list.append(partition)
 
         partitions.add_partition_inplace(
             raft_host=args.raft_host,

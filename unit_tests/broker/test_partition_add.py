@@ -3,6 +3,10 @@ import json
 import subprocess
 import sys
 
+print(50*"#")
+print("Testing Add Partition")
+
+
 try:
     port = sys.argv[1]
     topic_name = sys.argv[2]
@@ -45,3 +49,5 @@ print("Requesting get Partition")
 print(f"Status Code = {resp.status_code}")
 print(resp.json())
 print(25*"-")
+
+print(50*"#")

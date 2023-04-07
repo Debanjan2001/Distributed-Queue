@@ -33,5 +33,11 @@ python3 test_consumer_add.py 8002 t1 1 12 9002 9000 9001
 
 ### Partition Add Message Test
 ```
-<!-- python3 test_message_add.py 8000 t1 1 test_message1 -->
+python3 test_message_add.py 8000 t1 1 9000 9001 9002 test_message1 
 ```
+
+### Partition Get Message Test
+```
+python3 test_message_get.py 8001 t1 1 10 9001 9000 9002 
+```
+

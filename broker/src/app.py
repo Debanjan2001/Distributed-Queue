@@ -7,6 +7,9 @@ from src.raft import (
     PartitionDict
 )
 
+from src.views import (
+    get_partitions
+)
 def create_app():
     # for development purposes only
     logging.basicConfig(level=logging.DEBUG, force=True)
@@ -14,10 +17,10 @@ def create_app():
     app = Flask(__name__)
 
     def sigint_handler(signum, frame):
-        # partitions = get_partitions()
-        # for partition_raft in partitions.get_partitions():
-        #     print("Destroying")
-        #     partition_raft.destroy()
+        partitions:PartitionDict = get_partitions()
+        for partition_raft in partitions.get_partitions():
+            print("Destroying")
+            partition_raft.destroy()
         exit(0)
 
     signal.signal(signal.SIGINT, sigint_handler)

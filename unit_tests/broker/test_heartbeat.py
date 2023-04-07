@@ -2,6 +2,9 @@ import requests
 import json
 import sys
 
+print(50*"#")
+print("Testing Heartbeat")
+
 try:
     port = sys.argv[1]
 except:
@@ -17,3 +20,5 @@ print(resp.json())
 print(25*"-")
 
 
+
+print(50*"#")
