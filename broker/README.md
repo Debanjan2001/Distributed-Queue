@@ -3,9 +3,9 @@
 
 ## Sample Commands to Run the manager
 ```
-python3 run.py --flask_host 0.0.0.0:8000
-python3 run.py --flask_host 0.0.0.0:8001
-python3 run.py --flask_host 0.0.0.0:8002
+python3 run.py --flask_host 0.0.0.0:8000 --db_name broker_1
+python3 run.py --flask_host 0.0.0.0:8001 --db_name broker_2
+python3 run.py --flask_host 0.0.0.0:8002 --db_name broker_3
 ```
 
 ## ToDo/Thoughts of where code can break
@@ -16,3 +16,11 @@ python3 run.py --flask_host 0.0.0.0:8002
 - [] As of now, just calling a function which has @replicated decorator, might not function due to timeouts, what happens in those cases? is there an exception raised or the message is dropped silently?
 - [x] Replicated Method can't return any value, hence we might have to see which iteration we should use for the PartitionRaft abstraction
 - [] Adding Database
+
+
+### Command to setup db for first time
+```
+source setup_db.sh broker_1
+```
+
+- Then use run.py to start the app
