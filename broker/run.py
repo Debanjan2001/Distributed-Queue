@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from src.app import (
     app, db
 )
+from src.utils import init_from_db
 
 import os
 
@@ -24,6 +25,7 @@ def main():
             db.drop_all()
 
         db.create_all()
+        init_from_db()
         
     app.run(host=flask_host, port=flask_port)
 

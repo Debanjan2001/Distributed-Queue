@@ -5,6 +5,8 @@ from pysyncobj.batteries import ReplCounter, ReplDict
 from pysyncobj import SyncObjException
 import time
 import weakref
+# from db_models.partition_raft import PartitionModel
+# from db_models.log import LogModel
 
 MSG_ALL_REPLICA_SET_BIT = (1<<3) - 1  # 3 replicas in the cluster
 
@@ -126,26 +128,41 @@ class PartitionRaft():
             )
         )
 
-    def add_message(self, msg: str):
+    def add_message(self, msg: str, msg_replicated_bitmask=MSG_ALL_REPLICA_SET_BIT):
         try:
-            self.msg_dict.set(self.msg_count.get(), [msg, MSG_ALL_REPLICA_SET_BIT], sync=True, timeout=self.timeout)
-            self.msg_count.inc(sync=True, timeout=self.timeout)
+            msg_id = self.msg_count.get()
+            self.msg_dict.set(msg_id, [msg, msg_replicated_bitmask], sync=True)
+            self.msg_count.inc(sync=True)
+            return msg_id
         except SyncObjException:
             raise Exception("Unable to add message to the partition due to timeout")
         except Exception as e:
             raise e
         
+    def unset_msg_replicated_bit(self, msg_id:int, replica_id:int):
+        msg_object = self.msg_dict.get(msg_id)
+        msg_object[1] ^= (1 << replica_id)
+        if msg_object[1] == 0 : 
+            self.msg_dict.pop(msg_id, sync=True)
+        else:
+            self.msg_dict.set(msg_id, msg_object, sync=True)
+        
     def get_message(self, consumer_id):
         try:
             if consumer_id not in self.consumer_dict:
-                raise Exception(f"Consumer_id={consumer_id} not registered")
+                self.add_consumer(consumer_id=consumer_id)
+                # raise Exception(f"Consumer_id={consumer_id} not registered")
             
             msg_id = self.consumer_dict[consumer_id] 
             if msg_id >= self.msg_count.get():
-                return None
+                raise Exception(f"Consumer_id={consumer_id} has no new messages to be read")
             
-            self.consumer_dict.set(consumer_id, msg_id+1, sync=True, timeout=self.timeout)
-            return self.msg_dict[msg_id]
+            self.consumer_dict.set(consumer_id, msg_id+1, sync=True)
+            
+            if msg_id not in self.msg_dict:
+                return None, msg_id
+                
+            return self.msg_dict[msg_id], msg_id
         except SyncObjException:
             raise Exception("Unable to get message from the partition due to timeout")
         except Exception as e:
@@ -161,7 +178,7 @@ class PartitionRaft():
         # if consumer_id in self.consumer_dict:
         #     raise Exception("Consumer already registered")
         try:
-            self.consumer_dict.set(consumer_id, 0, sync=True, timeout=self.timeout)
+            self.consumer_dict.set(consumer_id, 0, sync=True)
         except SyncObjException:
             raise Exception("Unable to add consumer to partition due to timeout")
         except Exception as e:
@@ -270,3 +287,9 @@ class PartitionDict:
     
     def get_keys(self):
         return list(self.partitions.keys())
+    
+partitions = PartitionDict()
+
+def get_partitions():
+    global partitions
+    return partitions

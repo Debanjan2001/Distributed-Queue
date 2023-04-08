@@ -7,19 +7,16 @@ from flask_restful import (
 from src.http_status_codes import *
 
 from src.raft import (
-    PartitionDict,
+    partitions,
     # get_partitions
 )
 
+from src.app import app, db
+from db_models import LogModel, PartitionModel
+
 api_bp = Blueprint('api', __name__)
 api = Api(api_bp)
-
-## Export These
-partitions = PartitionDict()
-
-def get_partitions():
-    global partitions
-    return partitions
+app.register_blueprint(api_bp)
 
 class HeartbeatAPI(Resource):
     def get(self):
@@ -75,13 +72,14 @@ class MessageAPI(Resource):
             if not partition.has_consumer(args.consumer_id):
                 partition.add_consumer(args.consumer_id)
                 
-            msg = partition.get_message(args.consumer_id)
+            msg, msg_id = partition.get_message(args.consumer_id)
             if msg is None:
-                return {
-                    "status": "Failure",
-                    "reason": f"No message for consumer ID {args.consumer_id} in partition {args.partition_id}"
-                }, HTTP_400_BAD_REQUEST
-            
+                return LogModel.query.filter_by(topic_name=self.topic_name, partition_id=self.partition_id, msg_offset=msg_id).first().msg
+            # DB update
+            # consumer = ConsumerModel.query.filter_by(consumer_id=args["consumer_id"]).first()
+            # consumer.msg_offset += 1
+            # db.session.commit()
+
             return {
                 "status": "Success",
                 "message": msg
@@ -108,7 +106,22 @@ class MessageAPI(Resource):
                     "reason": f"No partition with ID {args.partition_id}"
                 }, HTTP_400_BAD_REQUEST
 
-            partition.add_message(args.message)
+            msg_id = partition.add_message(args.message)
+
+            # DB updates
+            log = LogModel(topic_name = args.topic_name,
+                           partition_id = args.partition_id,
+                           msg = args.message,
+                           msg_offset = msg_id)
+            db.session.add(log)
+            db.session.commit()
+
+            partition_db_obj = PartitionModel.query.filter_by(topic_name=args.topic_name, partition_id=args.partition_id).first()
+            partition_db_obj.msg_count += 1
+            db.session.commit()
+
+            partition.unset_msg_replicated_bit(msg_id, args.partition_id)
+            
             return {
                 "status": "Success",
                 "message": f"Message added to Partition_id = {args.partition_id} of `{args.topic_name}`"
@@ -143,6 +156,15 @@ class ConsumerAPI(Resource):
                 }, HTTP_400_BAD_REQUEST
             
             partition.add_consumer(args.consumer_id)
+
+            # DB update
+            # consumer = ConsumerModel(consumer_id=args.consumer_id,
+            #                          topic_name=args.topic_name,
+            #                          partition_id=args.partition_id,
+            #                          msg_offset=0)
+            # db.session.add(consumer)
+            # db.session.commit()
+
             return {
                 "status": "Success",
                 "Message": f"Consumer#{args.consumer_id} registered successfully for Topic: {args.topic_name}, Partition: {args.partition_id}"
@@ -190,6 +212,16 @@ class PartitionAPI(Resource):
                 partition_id=args.partition_id,
                 replica_id=args.replica_id,
             )
+
+            # DB Update
+            partition = PartitionModel(topic_name=args["topic_name"],
+                                       partition_id=args["partition_id"],
+                                       msg_count=0,
+                                       replica_id=args["replica_id"],
+                                       raft_host=args["raft_host"],
+                                       raft_partners=str(args["raft_partners"]))
+            db.session.add(partition)
+            db.session.commit()
 
             return {
                 "status": "Success",

@@ -2,17 +2,9 @@ import logging
 import signal
 from typing import List
 from flask import Flask
-from src.raft import (
-    PartitionDict
-)
+from src.raft import get_partitions
 from flask_sqlalchemy import SQLAlchemy
-from src.views import (
-    get_partitions
-)
-
 import os
-
-from src import views
 
 def create_app():
     # for development purposes only
@@ -24,7 +16,7 @@ def create_app():
     db = SQLAlchemy(app)
 
     def sigint_handler(signum, frame):
-        partitions:PartitionDict = get_partitions()
+        partitions = get_partitions()
 
         for partition_raft in partitions.get_partitions():
             print(f"Destroying {partition_raft}")
@@ -36,4 +28,10 @@ def create_app():
     return app, db
 
 app, db = create_app()
-app.register_blueprint(views.api_bp)
+
+from src import views
+
+# from src.utils import init_from_db
+
+# with app.app_context():
+#     init_from_db()
