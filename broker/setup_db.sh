@@ -8,8 +8,7 @@ then
 fi
 export DATABASE_NAME
 
-echo "alter user postgres with password 'admin';
-create database $DATABASE_NAME;" > create_database.sql
+echo "create database $DATABASE_NAME;" > create_database.sql
 
 cat create_database.sql | sudo -iu postgres psql
 
