@@ -3,9 +3,9 @@
 
 ## Sample Commands to Run the manager
 ```
-python3 run.py --flask_host 0.0.0.0:8000 --db_name broker_1
-python3 run.py --flask_host 0.0.0.0:8001 --db_name broker_2
-python3 run.py --flask_host 0.0.0.0:8002 --db_name broker_3
+source setup_db.sh broker_1 && python3 run.py --flask_host 0.0.0.0:8000
+source setup_db.sh broker_2 && python3 run.py --flask_host 0.0.0.0:8001
+source setup_db.sh broker_3 && python3 run.py --flask_host 0.0.0.0:8002
 ```
 
 ## ToDo/Thoughts of where code can break

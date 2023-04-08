@@ -10,7 +10,6 @@ import os
 def main():
     parser = ArgumentParser()
     parser.add_argument('--flask_host', default='0.0.0.0:8000')
-    parser.add_argument('--db_name', required=True)
     parser.add_argument('--clear_db', action='store_true')
     args = parser.parse_args()
 
@@ -26,8 +25,6 @@ def main():
 
         db.create_all()
         
-    os.system(f'bash setup_db.sh {args.db_name}')
-
     app.run(host=flask_host, port=flask_port)
 
 
