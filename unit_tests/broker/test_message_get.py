@@ -25,8 +25,6 @@ except:
 
 broker_url = f"http://127.0.0.1:{port}"
 
-subprocess.run(["python", "test_consumer_add.py", port, topic_name, str(partition_id), consumer_id, host_port, partner1_port, partner2_port])
-
 resp = requests.get(
     broker_url + "/logs",
     json={
