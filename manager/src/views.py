@@ -116,7 +116,7 @@ class ConsumerAPI(Resource):
             "consumer_id": consumer_id 
         }, HTTP_201_CREATED
     
-def MessageAPI(Resource):
+class MessageAPI(Resource):
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument('producer_id', type=str, required=True)
@@ -197,12 +197,7 @@ def MessageAPI(Resource):
                 "status": "Failed",
                 "reason": f"Unable to fetch message."
             }, HTTP_400_BAD_REQUEST
-        
-
-
-
-
-
+    
 api.add_resource(HeartbeatAPI, "/")
 api.add_resource(RAFTStatusAPI, "/raft_status")
 api.add_resource(BrokerAPI, "/brokers")
