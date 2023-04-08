@@ -5,6 +5,7 @@ from flask import Flask
 from src.raft import get_partitions
 from flask_sqlalchemy import SQLAlchemy
 import os
+from threading import Thread
 
 def create_app():
     # for development purposes only
@@ -21,7 +22,6 @@ def create_app():
         for partition_raft in partitions.get_partitions():
             print(f"Destroying {partition_raft}")
             partition_raft.remove()
-        
         exit(0)
 
     signal.signal(signal.SIGINT, sigint_handler)
@@ -35,3 +35,7 @@ from src import views
 
 # with app.app_context():
 #     init_from_db()
+
+
+
+             

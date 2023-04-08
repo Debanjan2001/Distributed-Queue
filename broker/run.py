@@ -5,6 +5,7 @@ from src.app import (
     app, db
 )
 from src.utils import init_from_db
+from src.msg_handler import run_msg_handler_thread
 
 import os
 
@@ -26,6 +27,8 @@ def main():
 
         db.create_all()
         init_from_db()
+        run_msg_handler_thread()
+
         
     app.run(host=flask_host, port=flask_port)
 

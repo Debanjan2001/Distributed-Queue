@@ -8,12 +8,12 @@ then
 fi
 export DATABASE_NAME
 
-echo "create database $DATABASE_NAME;" > create_database.sql
+echo "create database $DATABASE_NAME;" > create_database_$DATABASE_NAME.sql
 
-cat create_database.sql | sudo -iu postgres psql
+cat create_database_$DATABASE_NAME.sql | sudo -iu postgres psql
 
 printf "\n[SUCCESSFUL]: Database::$DATABASE_NAME Creation\n\n"
 
-rm create_database.sql
+rm create_database_$DATABASE_NAME.sql
 
 printf "\n[SUCCESSFUL]: Cleanup\n\n"

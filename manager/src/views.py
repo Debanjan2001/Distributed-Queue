@@ -12,6 +12,7 @@ from src.raft import (
     add_topic,
     add_producer,
     add_consumer,
+    add_partition,
     is_producer,
     is_consumer,
     get_brokers_for_topic_partition
@@ -78,7 +79,44 @@ class TopicAPI(Resource):
         return {
             "status": "Success",
         }, HTTP_201_CREATED
+    
+class PartitionAPI(Resource):
+    def get(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('topic_name', type=str, required=True)
+        parser.add_argument('partition_id', type=int, required=True)
+        args = parser.parse_args()
 
+        broker_list = get_brokers_for_topic_partition(args["topic_name"], args["partition_id"])
+        return {
+            "status": "Success",
+            "brokers": broker_list
+        }, HTTP_200_OK
+    
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('producer_id', type=str, required=True)
+        parser.add_argument('topic_name', type=str, required=True)
+        parser.add_argument('partition_id', type=int, required=True)
+        args = parser.parse_args()
+
+        if not is_producer(args["producer_id"], args["topic_name"]):
+            return {
+                "status": "Failed",
+                "reason": f"Producer with id({args['producer_id']}) doesn't exist for topic {args['topic_name']}"
+            }, HTTP_400_BAD_REQUEST
+        
+        try:
+            add_partition(args["topic_name"])
+        except Exception as e:
+            return {
+                "status": "Failed",
+                "reason": str(e)
+            }, HTTP_400_BAD_REQUEST
+        
+        return {
+            "status": "Success",
+        }, HTTP_201_CREATED
     
 class ProducerAPI(Resource):
     def post(self):
@@ -140,10 +178,10 @@ class MessageAPI(Resource):
         
         for broker in brokers:
             response = requests.post(
-                url = broker + "/messages", 
+                url = broker + "/logs", 
                 json = {
                     "topic_name": args["topic_name"],
-                    "partition_id": args["partition_id"],
+                    "partition_id": int(args["partition_id"]),
                     "message": args["message"]
                 }                   
             )
@@ -180,10 +218,10 @@ class MessageAPI(Resource):
         
         for broker in brokers:
             response = requests.get(
-                url = broker + "/messages", 
+                url = broker + "/logs", 
                 json = {
                     "topic_name": args["topic_name"],
-                    "partition_id": args["partition_id"],
+                    "partition_id": int(args["partition_id"]),
                     "consumer_id": args["consumer_id"]
                 }                   
             )
@@ -202,6 +240,7 @@ api.add_resource(HeartbeatAPI, "/")
 api.add_resource(RAFTStatusAPI, "/raft_status")
 api.add_resource(BrokerAPI, "/brokers")
 api.add_resource(TopicAPI, "/topics")
+api.add_resource(PartitionAPI, "/partitions")
 api.add_resource(ProducerAPI, "/producers")
 api.add_resource(ConsumerAPI, "/consumers")
 api.add_resource(MessageAPI, "/messages")

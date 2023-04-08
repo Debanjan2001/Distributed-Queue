@@ -73,6 +73,13 @@ class MessageAPI(Resource):
                 partition.add_consumer(args.consumer_id)
                 
             msg, msg_id = partition.get_message(args.consumer_id)
+            
+            if msg_id is None:
+                return {
+                    "status": "Success",
+                    "message": "No unread messages found"
+                }, HTTP_200_OK
+            
             if msg is None:
                 return LogModel.query.filter_by(topic_name=self.topic_name, partition_id=self.partition_id, msg_offset=msg_id).first().msg
             # DB update

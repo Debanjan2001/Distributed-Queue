@@ -6,7 +6,8 @@ from pysyncobj import SyncObj
 from pysyncobj.batteries import ReplDict, ReplCounter
 
 import requests
-
+from multiprocessing import Process
+import os
 
 SYNC_OBJ: SyncObj = None
 
@@ -67,12 +68,11 @@ def get_raft_status() -> Dict:
 def is_leader() -> bool:
     return get_raft_status().get('is_leader', False)
 
-def get_free_hosts(k: int):
+def get_free_hosts(k: int, base_url: str = 'localhost'):
     base_port = get_base_port()
     
     hosts = []
     PORT_OFFSET = 10000
-    base_url = '0.0.0.0'
     for _ in range(k):
         host = base_url + ':' + str(PORT_OFFSET + base_port.inc(sync=True))
         hosts.append(host)
@@ -85,7 +85,7 @@ def add_broker(broker_addr: str) -> bool:
         raise Exception(f'Broker with addr {broker_addr} already exists')
     
     broker_id = str(uuid.uuid4().hex)
-    broker_dict[broker_id] = broker_addr
+    broker_dict.set(broker_id, broker_addr, sync=True)
 
 def get_broker(broker_id: str) -> str:
     broker_dict = get_broker_dict()
@@ -107,9 +107,27 @@ def get_random_brokers(k: int):
 
     return broker_ids[:k]
 
+def run_broker(host: str):
+    port = int(host.rsplit(':', 1)[1])
+    print(port)
+    os.system(f'/bin/bash -c "source ../broker/setup_db.sh broker_{port} && python3 ../broker/run.py --flask_host {host}"')
+
 # Functions for topic_dict
 def add_topic(topic_name: str):
     topic_dict = get_topic_dict()
+
+    # if(len(topic_dict) % 3 == 0):
+    #     # Spawn three new brokers
+    #     try:
+    #         broker_hosts = get_free_hosts(3, '127.0.0.1')
+    #         for host in broker_hosts:
+    #             p = Process(target=run_broker, args=(host,))
+    #             p.start()
+    #             add_broker(host)
+    #         import time
+    #         time.sleep(3)
+    #     except Exception as e:
+    #         print(f"[Broker Manager] add_topic(): {e}") 
 
     print(f"[Broker Manager] add_topic(): Trying to add topic {topic_name}")
     
@@ -138,7 +156,9 @@ def add_partition(topic_name: str):
 
     print(f"[Broker Manager] add_partition(): Adding partition {partition_id} to {topic_name}")
 
-    topic_dict[topic_name][partition_id] = set()
+    partition_dict = topic_dict.get(topic_name)
+    partition_dict[partition_id] = set()
+    topic_dict.set(topic_name, partition_dict, sync=True)
 
     print(topic_dict.rawData())
 
@@ -147,8 +167,8 @@ def add_partition(topic_name: str):
         broker_ids = get_random_brokers(3)
         raft_hosts = get_free_hosts(3)
     except Exception as e:
-        print(str(e))
-        # raise Exception("Not enough brokers or free ports to ensure replication of partition")
+        # print(str(e))
+        raise Exception("Not enough brokers or free ports to ensure replication of partition")
     
     print(f"[Broker Manager] add_partition(): Found these 3 free hosts for {raft_hosts}: {topic_name}")
     
@@ -158,8 +178,11 @@ def add_partition(topic_name: str):
 # This should ideally be only called by add_partition
 def add_broker_to_topic_partition(topic_name: str, partition_id: int, broker_id: str, replica_id: int, raft_hosts: List[Any]):
     topic_dict = get_topic_dict()
+    
+    print(f"[Broker Manager] add_broker_to_topic_partition(): Inside")
 
-    if topic_name not in topic_dict or partition_id not in topic_dict[partition_id]:
+
+    if topic_name not in topic_dict or partition_id not in topic_dict.get(topic_name):
         raise Exception(f'Topic {topic_name} or partition_id{partition_id} does not exist')
     
     ''' 
@@ -169,10 +192,13 @@ def add_broker_to_topic_partition(topic_name: str, partition_id: int, broker_id:
     #     add_partition(topic_name)
     #     topic_dict[topic_name][partition_id] = set()
 
+    print(f"[Broker Manager] add_broker_to_topic_partition(): Flag 2")
     if broker_id in topic_dict[topic_name][partition_id]:
         raise Exception(f'Broker id {broker_id} already added for topic name {topic_name}.')
     
-    topic_dict[topic_name][partition_id].add(broker_id)
+    partition_dict = topic_dict.get(topic_name)
+    partition_dict[partition_id].add(broker_id)
+    topic_dict.set(topic_name, partition_dict, sync=True)
 
     try:
         broker_addr = get_broker(broker_id)
@@ -181,6 +207,7 @@ def add_broker_to_topic_partition(topic_name: str, partition_id: int, broker_id:
     
     # @todo: Pass raft port and it's neighbours to broker from some pool, make API call to broker
     # to initialize a partition replica at this port.
+    # print(requests.get(broker_addr + '/').json())
     response = requests.post(
         url = broker_addr + "/partitions",
         json = {
@@ -198,7 +225,7 @@ def add_broker_to_topic_partition(topic_name: str, partition_id: int, broker_id:
 def get_brokers_for_topic_partition(topic_name: str, partition_id: int):
     topic_dict = get_topic_dict()
 
-    if topic_name not in topic_dict or partition_id not in topic_dict[partition_id]:
+    if topic_name not in topic_dict or partition_id not in topic_dict.get(topic_name):
         return None
 
     broker_dict = get_broker_dict()

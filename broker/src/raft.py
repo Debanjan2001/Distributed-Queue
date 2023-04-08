@@ -138,14 +138,24 @@ class PartitionRaft():
             raise Exception("Unable to add message to the partition due to timeout")
         except Exception as e:
             raise e
-        
+
     def unset_msg_replicated_bit(self, msg_id:int, replica_id:int):
-        msg_object = self.msg_dict.get(msg_id)
-        msg_object[1] ^= (1 << replica_id)
-        if msg_object[1] == 0 : 
-            self.msg_dict.pop(msg_id, sync=True)
-        else:
-            self.msg_dict.set(msg_id, msg_object, sync=True)
+        try:
+            msg_object = self.msg_dict.get(msg_id)
+            print(f"currently bit={msg_object}")
+            msg_object[1] ^= (1 << replica_id)
+            print(f"then, bit={msg_object}")
+
+            if msg_object[1] == 0 : 
+                print("yes removing object")
+                self.msg_dict.pop(msg_id, sync=True)
+            else:
+                print(f"currently bit={msg_object}")
+                self.msg_dict.set(msg_id, msg_object, sync=True)
+        except SyncObjException:
+            raise Exception("Unable to unset replicated bit due to timeout")
+        except Exception as e:
+            raise e
         
     def get_message(self, consumer_id):
         try:
@@ -155,14 +165,15 @@ class PartitionRaft():
             
             msg_id = self.consumer_dict[consumer_id] 
             if msg_id >= self.msg_count.get():
-                raise Exception(f"Consumer_id={consumer_id} has no new messages to be read")
+                return None, None
+                # raise Exception(f"Consumer_id={consumer_id} has no new messages to be read")
             
             self.consumer_dict.set(consumer_id, msg_id+1, sync=True)
             
             if msg_id not in self.msg_dict:
                 return None, msg_id
                 
-            return self.msg_dict[msg_id], msg_id
+            return self.msg_dict[msg_id][0], msg_id
         except SyncObjException:
             raise Exception("Unable to get message from the partition due to timeout")
         except Exception as e:
@@ -258,7 +269,8 @@ class PartitionDict:
             # args=(weakref.ref(partition),)
             
             # # Otherwise if using batteries, of iteration-2
-            args=(weakref.ref(partition.sync_obj),)
+            args=(weakref.ref(partition.sync_obj),),
+            daemon=True
         )
         thread.start()
 

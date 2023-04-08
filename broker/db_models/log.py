@@ -1,5 +1,6 @@
-from src.raft import MSG_ALL_REPLICA_SET_BIT
+# from src.raft import MSG_ALL_REPLICA_SET_BIT
 from src.app import db
+MSG_ALL_REPLICA_SET_BIT= (1<<3) - 1
 
 class LogModel(db.Model):
     __tablename__ = 'log'
