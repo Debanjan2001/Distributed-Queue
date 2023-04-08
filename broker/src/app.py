@@ -18,9 +18,11 @@ def create_app():
 
     def sigint_handler(signum, frame):
         partitions:PartitionDict = get_partitions()
+
         for partition_raft in partitions.get_partitions():
-            print("Destroying")
-            partition_raft.destroy()
+            print(f"Destroying {partition_raft}")
+            partition_raft.remove()
+        
         exit(0)
 
     signal.signal(signal.SIGINT, sigint_handler)

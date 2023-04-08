@@ -31,7 +31,7 @@ resp = requests.post(
     json={
         "topic_name": topic_name,
         "partition_id": partition_id,
-        "replica_id": 1,
+        "replica_id": int(host_port)%3,
         "raft_host": f"localhost:{host_port}",
         "raft_partners": [f"localhost:{partner1_port}", f"localhost:{partner2_port}"]
     })

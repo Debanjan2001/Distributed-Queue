@@ -1,5 +1,7 @@
 # Broker Unit tests
 
+- Replica_id has been set to `host_port%3` for simplicity, hence only use the following commands for fault-safe tests
+
 ## Sample Commands to test the Broker
 
 ### Heartbeat Test
