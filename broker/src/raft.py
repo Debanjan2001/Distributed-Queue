@@ -142,15 +142,15 @@ class PartitionRaft():
     def unset_msg_replicated_bit(self, msg_id:int, replica_id:int):
         try:
             msg_object = self.msg_dict.get(msg_id)
-            print(f"currently bit={msg_object}")
+            # print(f"currently bit={msg_object}")
             msg_object[1] ^= (1 << replica_id)
-            print(f"then, bit={msg_object}")
+            # print(f"then, bit={msg_object}")
 
             if msg_object[1] == 0 : 
-                print("yes removing object")
+                # print("yes removing object")
                 self.msg_dict.pop(msg_id, sync=True)
             else:
-                print(f"currently bit={msg_object}")
+                # print(f"currently bit={msg_object}")
                 self.msg_dict.set(msg_id, msg_object, sync=True)
         except SyncObjException:
             raise Exception("Unable to unset replicated bit due to timeout")

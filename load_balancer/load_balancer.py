@@ -24,7 +24,7 @@ def check_leader(managers):
                     break 
             except:
                 managers['leader_idx'] = None
-                
+
         time.sleep(2)
 
 with app.app_context():
@@ -55,7 +55,7 @@ class LoadBalancer(Resource):
                 response = requests.get(
                     url=leader_manager + "/" + path,
                 )
-            return response.json()
+            return response.json(), response.status_code
         except:
             return {
                 "status": "Failed",
@@ -71,7 +71,7 @@ class LoadBalancer(Resource):
                 url=leader_manager + "/" +path,
                 json=data
             )
-            return response.json()
+            return response.json(), response.status_code
         except:
             return {
                 "status": "Failed",

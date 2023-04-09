@@ -97,7 +97,6 @@ class PartitionAPI(Resource):
         parser = reqparse.RequestParser()
         parser.add_argument('producer_id', type=str, required=True)
         parser.add_argument('topic_name', type=str, required=True)
-        parser.add_argument('partition_id', type=int, required=True)
         args = parser.parse_args()
 
         if not is_producer(args["producer_id"], args["topic_name"]):

@@ -4,3 +4,4 @@ migrations/
 build/
 dist/
 *.egg-info/
+stress_tests/consumer_outs/*
