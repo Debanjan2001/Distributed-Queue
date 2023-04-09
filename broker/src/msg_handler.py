@@ -10,7 +10,7 @@ def run_periodic_db_dump():
     with app.app_context():
         partitions = get_partitions()
         while(True):
-            print("Db dump thread running...")
+            # print("Db dump thread running...")
             for partition_raft in partitions.get_partitions():
                 for msg_id in list(partition_raft.msg_dict.keys()):
                     msg_object = partition_raft.msg_dict[msg_id]

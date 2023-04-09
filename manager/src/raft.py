@@ -96,16 +96,34 @@ def get_broker(broker_id: str) -> str:
     
     return broker_addr
 
-def get_random_brokers(k: int):
+def get_hearbeat(addr: str):
+    try:
+        res = requests.get(addr)
+        return True
+    except Exception as e:
+        return False
+
+def get_random_live_brokers(k: int):
     broker_dict = get_broker_dict()
 
     if k > len(broker_dict):
         raise Exception(f'Not enough brokers in the systems')
     
     broker_ids = list(broker_dict.keys())
+
     random.shuffle(broker_ids)
 
-    return broker_ids[:k]
+    live_brokers = []
+    for broker_id in broker_ids:
+        broker_addr = broker_dict.get(broker_id)
+        if get_hearbeat(broker_addr):
+            live_brokers.append(broker_id)
+        if len(live_brokers) == k:
+            break
+    
+    if len(live_brokers) < k:
+        raise Exception(f'Not enough live brokers in the system')
+    return broker_ids
 
 def run_broker(host: str):
     port = int(host.rsplit(':', 1)[1])
@@ -164,7 +182,7 @@ def add_partition(topic_name: str):
 
     # @todo: Pick 3 brokers and corresponding 3 free hosts to add partitions replicas to.
     try:
-        broker_ids = get_random_brokers(3)
+        broker_ids = get_random_live_brokers(3)
         raft_hosts = get_free_hosts(3)
     except Exception as e:
         # print(str(e))
@@ -208,19 +226,20 @@ def add_broker_to_topic_partition(topic_name: str, partition_id: int, broker_id:
     # @todo: Pass raft port and it's neighbours to broker from some pool, make API call to broker
     # to initialize a partition replica at this port.
     # print(requests.get(broker_addr + '/').json())
-    response = requests.post(
-        url = broker_addr + "/partitions",
-        json = {
-            'topic_name': topic_name,
-            'partition_id': partition_id,
-            'replica_id': replica_id,
-            'raft_host': raft_hosts[replica_id],
-            'raft_partners': [raft_hosts[idx] for idx in range(len(raft_hosts)) if idx != replica_id]
-        }
-    )
-
-    return response
-
+    try:
+        response = requests.post(
+            url = broker_addr + "/partitions",
+            json = {
+                'topic_name': topic_name,
+                'partition_id': partition_id,
+                'replica_id': replica_id,
+                'raft_host': raft_hosts[replica_id],
+                'raft_partners': [raft_hosts[idx] for idx in range(len(raft_hosts)) if idx != replica_id]
+            }
+        )
+        return response
+    except Exception as e:
+        raise(e)
 
 def get_brokers_for_topic_partition(topic_name: str, partition_id: int):
     topic_dict = get_topic_dict()

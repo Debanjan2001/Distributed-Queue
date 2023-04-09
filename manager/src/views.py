@@ -125,15 +125,16 @@ class ProducerAPI(Resource):
 
         try:
             producer_id = add_producer(args['topic_name'])
+            return {
+                "status": "Success",
+                "producer_id": producer_id 
+            }, HTTP_201_CREATED
         except Exception as e:
             return {
                 "status": "Failed",
                 "reason": str(e)
             }, HTTP_400_BAD_REQUEST
-        return {
-            "status": "Success",
-            "producer_id": producer_id 
-        }, HTTP_201_CREATED
+        
     
 class ConsumerAPI(Resource):
     def post(self):
@@ -143,16 +144,17 @@ class ConsumerAPI(Resource):
 
         try:
             consumer_id, partition_ids = add_consumer(args['topic_name'])
+            return {
+                "status": "Success",
+                "consumer_id": consumer_id,
+                "partitions": partition_ids,
+            }, HTTP_201_CREATED
         except Exception as e:
             return {
                 "status": "Failed",
                 "reason": str(e)
             }, HTTP_400_BAD_REQUEST
-        return {
-            "status": "Success",
-            "consumer_id": consumer_id,
-            "partitions": partition_ids,
-        }, HTTP_201_CREATED
+        
     
 class MessageAPI(Resource):
     def post(self):
@@ -162,39 +164,46 @@ class MessageAPI(Resource):
         parser.add_argument('partition_id', type=int, required=True)
         parser.add_argument('message', type=str, required=True)
         args = parser.parse_args()
-
-        if not is_producer(args["producer_id"], args["topic_name"]):
-            return {
-                "status": "Failed",
-                "reason": f"Producer with id({args['producer_id']}) doesn't exist for topic {args['topic_name']}"
-            }, HTTP_400_BAD_REQUEST
-        
-        brokers = get_brokers_for_topic_partition(args["topic_name"], args["partition_id"])
-        if brokers is None:
-            return {
-                "status": "Failed",
-                "reason": f"Topic or partition doesn't exist"
-            }, HTTP_400_BAD_REQUEST
-        
-        for broker in brokers:
-            response = requests.post(
-                url = broker + "/logs", 
-                json = {
-                    "topic_name": args["topic_name"],
-                    "partition_id": int(args["partition_id"]),
-                    "message": args["message"]
-                }                   
-            )
-            if response.status_code == HTTP_201_CREATED:
+        try:
+            if not is_producer(args["producer_id"], args["topic_name"]):
                 return {
-                "status": "Success",
-                "reason": f"Message successfuly posted"
-            }, HTTP_201_CREATED
-
-        return {
+                    "status": "Failed",
+                    "reason": f"Producer with id({args['producer_id']}) doesn't exist for topic {args['topic_name']}"
+                }, HTTP_400_BAD_REQUEST
+            
+            brokers = get_brokers_for_topic_partition(args["topic_name"], args["partition_id"])
+            if brokers is None:
+                return {
+                    "status": "Failed",
+                    "reason": f"Topic or partition doesn't exist"
+                }, HTTP_400_BAD_REQUEST
+            
+            for broker in brokers:
+                try:
+                    response = requests.post(
+                        url = broker + "/logs", 
+                        json = {
+                            "topic_name": args["topic_name"],
+                            "partition_id": int(args["partition_id"]),
+                            "message": args["message"]
+                        }                   
+                    )
+                    if response.status_code == HTTP_201_CREATED:
+                        return {
+                        "status": "Success",
+                        "reason": f"Message successfuly posted"
+                    }, HTTP_201_CREATED
+                except:
+                    continue
+            return {
                 "status": "Failed",
                 "reason": f"Unable to post message"
             }, HTTP_400_BAD_REQUEST
+        except Exception as e:
+            return {
+                    "status": "Failed",
+                    "reason": str(e)
+                }, HTTP_400_BAD_REQUEST
     
     def get(self):
         parser = reqparse.RequestParser()
@@ -203,39 +212,48 @@ class MessageAPI(Resource):
         parser.add_argument('partition_id', type=int, required=True)
         args = parser.parse_args()
 
-        if not is_consumer(args["consumer_id"], args["topic_name"]):
-            return {
-                "status": "Failed",
-                "reason": f"Consumer with id({args['consumer_id']}) doesn't exist for topic {args['topic_name']}"
-            }, HTTP_400_BAD_REQUEST
-        
-        brokers = get_brokers_for_topic_partition(args["topic_name"], args["partition_id"])
-        if brokers is None:
-            return {
-                "status": "Failed",
-                "reason": f"Topic or partition doesn't exist"
-            }, HTTP_400_BAD_REQUEST
-        
-        for broker in brokers:
-            response = requests.get(
-                url = broker + "/logs", 
-                json = {
-                    "topic_name": args["topic_name"],
-                    "partition_id": int(args["partition_id"]),
-                    "consumer_id": args["consumer_id"]
-                }                   
-            )
-
-            if response.status_code == HTTP_200_OK:
+        try:
+            if not is_consumer(args["consumer_id"], args["topic_name"]):
                 return {
-                    "status": "Success",
-                    "message": response.json().get("message")
-                }, HTTP_200_OK
+                    "status": "Failed",
+                    "reason": f"Consumer with id({args['consumer_id']}) doesn't exist for topic {args['topic_name']}"
+                }, HTTP_400_BAD_REQUEST
+            
+            brokers = get_brokers_for_topic_partition(args["topic_name"], args["partition_id"])
+            if brokers is None:
+                return {
+                    "status": "Failed",
+                    "reason": f"Topic or partition doesn't exist"
+                }, HTTP_400_BAD_REQUEST
+            
+            for broker in brokers:
+                try:
+                    response = requests.get(
+                        url = broker + "/logs", 
+                        json = {
+                            "topic_name": args["topic_name"],
+                            "partition_id": int(args["partition_id"]),
+                            "consumer_id": args["consumer_id"]
+                        }                   
+                    )
 
-        return {
+                    if response.status_code == HTTP_200_OK:
+                        return {
+                            "status": "Success",
+                            "message": response.json().get("message")
+                        }, HTTP_200_OK
+                except:
+                    continue
+            return {
                 "status": "Failed",
                 "reason": f"Unable to fetch message."
             }, HTTP_400_BAD_REQUEST
+        except Exception as e:
+            return {
+                "status": "Failed",
+                "reason": str(e)
+            }, HTTP_400_BAD_REQUEST
+        
     
 api.add_resource(HeartbeatAPI, "/")
 api.add_resource(RAFTStatusAPI, "/raft_status")
