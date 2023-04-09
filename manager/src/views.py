@@ -142,7 +142,7 @@ class ConsumerAPI(Resource):
         args = parser.parse_args()
 
         try:
-            consumer_id = add_consumer(args['topic_name'])
+            consumer_id, partition_ids = add_consumer(args['topic_name'])
         except Exception as e:
             return {
                 "status": "Failed",
@@ -150,7 +150,8 @@ class ConsumerAPI(Resource):
             }, HTTP_400_BAD_REQUEST
         return {
             "status": "Success",
-            "consumer_id": consumer_id 
+            "consumer_id": consumer_id,
+            "partitions": partition_ids,
         }, HTTP_201_CREATED
     
 class MessageAPI(Resource):
