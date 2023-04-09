@@ -81,11 +81,7 @@ class MessageAPI(Resource):
                 }, HTTP_200_OK
             
             if msg is None:
-                return LogModel.query.filter_by(topic_name=self.topic_name, partition_id=self.partition_id, msg_offset=msg_id).first().msg
-            # DB update
-            # consumer = ConsumerModel.query.filter_by(consumer_id=args["consumer_id"]).first()
-            # consumer.msg_offset += 1
-            # db.session.commit()
+                msg = LogModel.query.filter_by(topic_name=args.topic_name, partition_id=args.partition_id, msg_offset=msg_id).first().msg
 
             return {
                 "status": "Success",
@@ -93,6 +89,7 @@ class MessageAPI(Resource):
             }, HTTP_200_OK
         
         except Exception as e:
+            print(e)
             return {
                 "status": "Failure",
                 "reason": str(e)

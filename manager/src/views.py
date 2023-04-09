@@ -225,11 +225,12 @@ class MessageAPI(Resource):
                     "consumer_id": args["consumer_id"]
                 }                   
             )
+
             if response.status_code == HTTP_200_OK:
                 return {
-                "status": "Success",
-                "message": response.json().get("message")
-            }, HTTP_200_OK
+                    "status": "Success",
+                    "message": response.json().get("message")
+                }, HTTP_200_OK
 
         return {
                 "status": "Failed",
