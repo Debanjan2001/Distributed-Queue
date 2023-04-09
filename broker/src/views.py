@@ -132,6 +132,7 @@ class MessageAPI(Resource):
             }, HTTP_201_CREATED
         
         except Exception as e:
+            print(e)
             return {
                 "status": "Failure",
                 "reason": str(e)

@@ -5,6 +5,7 @@ from pysyncobj.batteries import ReplCounter, ReplDict
 from pysyncobj import SyncObjException
 import time
 import weakref
+import os
 # from db_models.partition_raft import PartitionModel
 # from db_models.log import LogModel
 
@@ -110,6 +111,7 @@ class PartitionRaft():
             raft_partners, 
             topic_name, 
             partition_id,
+            replica_id
         ):
         self.topic_name = topic_name
         self.partition_id = partition_id
@@ -124,7 +126,8 @@ class PartitionRaft():
             raft_partners, 
             consumers=[self.msg_count, self.msg_dict, self.consumer_dict],
             conf=SyncObjConf(
-                autoTick=False
+                autoTick=False,
+                journalFile=f"{os.getcwd()}/raft_logs/broker/journal_{self.topic_name}_{self.partition_id}_{replica_id}.log",
             )
         )
 
@@ -237,7 +240,7 @@ class PartitionDict:
 
     def add_partition_inplace(self, raft_host:str, raft_partners:list, topic_name:str, partition_id:int, replica_id:int):
         self.lock.acquire()
-        partition = PartitionRaft(raft_host, raft_partners, topic_name, partition_id)
+        partition = PartitionRaft(raft_host, raft_partners, topic_name, partition_id, replica_id)
         self.partitions[(topic_name, partition_id)] = {
             'partition': partition,
             'replica_id': replica_id

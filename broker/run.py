@@ -19,10 +19,11 @@ def main():
     flask_port = args.flask_host.rsplit(':', 1)[1]
 
     # app = create_app()
-
+    os.makedirs(f'{os.getcwd()}/raft_logs/broker/', exist_ok=True)
     with app.app_context():
         if args.clear_db:
             print("Clearing Database")
+            os.system(f"rm -rf {os.getcwd()}/raft_logs/broker/*")
             db.drop_all()
 
         db.create_all()

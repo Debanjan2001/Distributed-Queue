@@ -61,15 +61,21 @@ print(25*"-")
 print("adding producer")
 for topic_num in range(NUM_TOPICS):
     for _ in range(NUM_PROUDUCERS_PER_TOPIC):
-        
-        resp = requests.post(
-            url = manager_url + "/producers",
-            json={
-                "topic_name": f"T{topic_num}"
-            }
-        )
-        producer_id = resp.json()["producer_id"]
-        producer_ids[f"T{topic_num}"].append(producer_id)
+        try:
+            resp = requests.post(
+                url = manager_url + "/producers",
+                json={
+                    "topic_name": f"T{topic_num}"
+                }
+            )
+            producer_id = resp.json()["producer_id"]
+            producer_ids[f"T{topic_num}"].append(producer_id)
+            sleep(0.1)
+        except Exception as e:
+            print(25*"-")
+            print(e)
+            print(resp.json())
+            print(25*"-")
 print(25*"-")
 
 print(25*"-")
@@ -92,17 +98,18 @@ prod_cons_threads = []
 def add_message(topic_num):
     for producer_id in producer_ids[f"T{topic_num}"]:
         for message_num in range(MESSAGE_PER_PRODUCER):
-            resp = requests.post(
-                url = manager_url + "/messages",
-                json={
-                    "producer_id": producer_id,
-                    "topic_name": f"T{topic_num}",
-                    "partition_id": message_num % NUM_PARTITIONS,
-                    "message": f"{message_num}th message for Topic T{topic_num} by producer P{producer_id}",
-                }
-            )
             try:
+                resp = requests.post(
+                    url = manager_url + "/messages",
+                    json={
+                        "producer_id": producer_id,
+                        "topic_name": f"T{topic_num}",
+                        "partition_id": message_num % NUM_PARTITIONS,
+                        "message": f"{message_num}th message for Topic T{topic_num} by producer P{producer_id}",
+                    }
+                )
                 assert(resp.status_code == 201)
+                sleep(0.1)
             except Exception as e:
                 print(25*"-")
                 print(e)
@@ -127,15 +134,21 @@ print(25*"-")
 print("adding consumer")
 for topic_num in range(NUM_TOPICS):
     for _ in range(NUM_CONSUMERS_PER_TOPIC):
-        
-        resp = requests.post(
-            url = manager_url + "/consumers",
-            json={
-                "topic_name": f"T{topic_num}"
-            }
-        )
-        consumer_id = resp.json()["consumer_id"]
-        consumer_ids[f"T{topic_num}"].append(consumer_id)
+        try:
+            resp = requests.post(
+                url = manager_url + "/consumers",
+                json={
+                    "topic_name": f"T{topic_num}"
+                }
+            )
+            consumer_id = resp.json()["consumer_id"]
+            consumer_ids[f"T{topic_num}"].append(consumer_id)
+            sleep(0.1)
+        except Exception as e:
+            print(25*"-")
+            print(e)
+            print(resp.json())
+            print(25*"-")
 print(25*"-")
 
 
@@ -143,18 +156,25 @@ def read_message(topic_num):
     for consumer_id in consumer_ids[f"T{topic_num}"]:
         for producer_id in producer_ids[f"T{topic_num}"]:
             for message_num in range(MESSAGE_PER_PRODUCER):
-                resp = requests.get(
-                    url = manager_url + "/messages",
-                    json={
-                        "consumer_id": consumer_id,
-                        "topic_name": f"T{topic_num}",
-                        "partition_id": message_num % NUM_PARTITIONS,
-                    }
-                )
-                assert(resp.status_code == 200)
-                with open('consumer_outs/T{}_C{}.txt'.format(topic_num, consumer_id), 'a') as f:
-                    f.write(resp.json()["message"] + "\n")
-
+                try:
+                    resp = requests.get(
+                        url = manager_url + "/messages",
+                        json={
+                            "consumer_id": consumer_id,
+                            "topic_name": f"T{topic_num}",
+                            "partition_id": message_num % NUM_PARTITIONS,
+                        }
+                    )
+                    sleep(0.1)
+                    assert(resp.status_code == 200)
+                    with open('consumer_outs/T{}_C{}.txt'.format(topic_num, consumer_id), 'a') as f:
+                        f.write(resp.json()["message"] + "\n")
+                except Exception as e:
+                    print(25*"-")
+                    print(e)
+                    print(resp.json())
+                    print(25*"-")
+                
 print(25*"-")
 print("reading messages")
 for topic_num in range(NUM_TOPICS):

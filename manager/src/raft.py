@@ -2,7 +2,7 @@ from typing import Dict, List, Union, Any
 import uuid
 import random
 
-from pysyncobj import SyncObj
+from pysyncobj import SyncObj, SyncObjConf
 from pysyncobj.batteries import ReplDict, ReplCounter
 
 import requests
@@ -21,7 +21,12 @@ def create_sync_obj(raft_host: str, partners: List[str]):
     global SYNC_OBJ
     if SYNC_OBJ:
         return 
-    SYNC_OBJ = SyncObj(raft_host, partners, consumers=get_distributed_objs())
+    SYNC_OBJ = SyncObj(
+        raft_host, 
+        partners, 
+        consumers=get_distributed_objs(), 
+        conf=SyncObjConf(journalFile=f"{os.getcwd()}/raft_logs/manager/journal_{raft_host}.log")
+    )
     SYNC_OBJ.waitBinded()
     SYNC_OBJ.waitReady()
 
