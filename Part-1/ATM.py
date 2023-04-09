@@ -1,63 +1,89 @@
 import sys, argparse
 from pysyncobj import SyncObj
 from pysyncobj.batteries import ReplCounter, ReplDict
+from metadata import server, STATUS_FAILURE, STATUS_SUCCESS, STATUS_TERMINATED, status_msg
 
-server = "localhost"
+class ATM:
+    def __init__(self, args):
+        other_nodes = []
+        for i in args.seed_nodes:
+            other_nodes.append(server+":"+i)
+        self.cnt = ReplCounter()
+        self.data = ReplDict()
+        self.syncobj = SyncObj(server+":"+args.self_addr, other_nodes, consumers=[self.cnt, self.data])
+
+    def exit(self):
+        self.syncobj.destroy()
 
 class Switch_Case:
-    def run(self, data, choice):
+    def run(self, choice:int, atm:ATM):
         default = "Incorrect input"
         try:
-            if int(choice) < 0 or int(choice) > 5:
+            if choice < 0 or choices > 5:
                 return default
         except Exception as error_message:
             print(default)
             return error_message
 
-        user_id = input("Enter user ID:")
-        if data.get(user_id) == None:
-            data.set(user_id, 0, sync=True)
+        return getattr(self, 'case_' + str(choice))(atm)
+ 
+    def case_1(self, atm:ATM):
+        user_id = input(">>> Enter A/C Number: ")
+        if atm.data.get(user_id) == None:
+            atm.data.set(user_id, 0, sync=True)
 
-        return getattr(self, 'case_' + choice)(data, user_id)
- 
-    def case_1(self, data, user_id):
-        amt = int(input("Enter amount to be withdrawn:"))
+        amt = int(input(">>> Enter amount to be withdrawn: Rs."))
 
-        if data.get(user_id) >= amt:
-            data.set(user_id, data.get(user_id) - amt, sync=True)
-            return "Success"
-        return "Failure"
+        if atm.data.get(user_id) >= amt:
+            atm.data.set(user_id, atm.data.get(user_id) - amt, sync=True)
+            return STATUS_SUCCESS
+        return STATUS_FAILURE
  
-    def case_2(self, data, user_id):
-        amt = int(input("Enter amount to deposit:"))
-        data.set(user_id, data.get(user_id) + amt, sync=True)
-        return "Success"
+    def case_2(self, atm:ATM):
+        user_id = input(">>> Enter A/C Number: ")
+        if atm.data.get(user_id) == None:
+            atm.data.set(user_id, 0, sync=True)
+
+        amt = int(input(">>> Enter amount to deposit: Rs."))
+        atm.data.set(user_id, atm.data.get(user_id) + amt, sync=True)
+        return STATUS_SUCCESS
  
-    def case_3(self, data, user_id):
-        return data.get(user_id)
+    def case_3(self, atm:ATM):
+        user_id = input(">>> Enter A/C Number: ")
+        if atm.data.get(user_id) == None:
+            atm.data.set(user_id, 0, sync=True)
+
+        balance = atm.data.get(user_id)
+        print(f"Balance Available: Rs.{balance}")
+        return STATUS_SUCCESS
     
-    def case_4(self, data, user_id):
-        amt = int(input("Enter amount to be transferred:"))
+    def case_4(self, atm:ATM):
+        user_id = input(">>> Enter A/C Number: ")
+        if atm.data.get(user_id) == None:
+            atm.data.set(user_id, 0, sync=True)
 
-        if data.get(user_id) >= amt:
-            user_2 = input("Enter beneficiary user ID:")
-            if data.get(user_2) == None:
-                data.set(user_2, 0, sync=True)
+        amt = int(input(">>> Enter amount to be transferred: Rs."))
 
-            data.set(user_id, data.get(user_id) - amt, sync=True)
-            data.set(user_2, data.get(user_2) + amt, sync=True)
-            return "Success"
+        if atm.data.get(user_id) >= amt:
+            user_2 = input(">>> Enter beneficiary A/C Number: ")
+            if atm.data.get(user_2) == None:
+                atm.data.set(user_2, 0, sync=True)
+
+            atm.data.set(user_id, atm.data.get(user_id) - amt, sync=True)
+            atm.data.set(user_2, atm.data.get(user_2) + amt, sync=True)
+            return STATUS_SUCCESS
         
-        return "Failure"
+        return STATUS_FAILURE
 
-    def case_5(self, data, user_id):
-        sys.exit()
+    def case_5(self, atm:ATM):
+        atm.exit()
+        return STATUS_TERMINATED
 
-def ATM(args, cnt, data):
-    other_nodes = []
-    for i in args.seed_nodes:
-        other_nodes.append(server+":"+i)
-    return SyncObj(server+":"+args.self_addr, other_nodes, consumers=[cnt, data])
+# def ATM(args, cnt, data):
+#     other_nodes = []
+#     for i in args.seed_nodes:
+#         other_nodes.append(server+":"+i)
+#     return SyncObj(server+":"+args.self_addr, other_nodes, consumers=[cnt, data])
 
 def main():
     parser = argparse.ArgumentParser()
@@ -65,21 +91,26 @@ def main():
     parser.add_argument("--seed-nodes", nargs="*", help="Addresses of seed nodes")
     args = parser.parse_args()
 
-    cnt = ReplCounter()
-    data = ReplDict()
-    syncObj = ATM(args, cnt, data)
+    atm = ATM(args)
 
     while (True):
-        print("Enter the number corresponnding to your choice:")
+        print(36*'#')
+        print("Please select a service:")
         print("1. Withdrawal")
         print("2. Deposit")
         print("3. Balance inquiry")
         print("4. Transfer to other account")
         print("5. Exit")
-        ch = input()
-
+        print(36*"-")
+        ch = int(input(">>> "))
+        print(12*"-"+" processing "+(12*"-"))
         switch = Switch_Case()
-        print(switch.run(data, ch))
+        result = switch.run(ch, atm)
+        print("<<< operation completion status :",status_msg[result],">>>")   
+        print(36*"#","\n")
+        if result == STATUS_TERMINATED :
+            sys.exit(0)
+
 
 if __name__ == '__main__':
     main()
