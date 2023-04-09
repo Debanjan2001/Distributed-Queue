@@ -265,13 +265,14 @@ def add_consumer(topic_name: str) -> str:
         raise Exception(f'Topic {topic_name} does not exist')
 
     consumer_dict = get_consumer_dict()
-
+    partition_dict = topic_dict.get(topic_name)
+    partition_ids = list(partition_dict.keys())
     consumer_id = str(uuid.uuid4().hex)
     print(f"[Broker Manager] add_consumer(): Adding consumer id {consumer_id} to {topic_name}")
     consumer_dict.set(consumer_id, topic_name, sync = True)
 
     print(f"[Broker Manager] add_consumer()", consumer_dict.rawData())
-    return consumer_id
+    return consumer_id, partition_ids
 
 def is_consumer(consumer_id: str, topic_name: str) -> bool:
     consumer_dict = get_consumer_dict()
