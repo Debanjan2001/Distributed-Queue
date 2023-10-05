@@ -2,6 +2,7 @@
 
 This is an implementation of a distributed messaging queue done as a group project for the course CS60002: Distributed Systems offered during Spring'23 by Prof Sandip Chakraborty. Every individual actor has its logic implemented in its own directory (broker/load_balancer/manager). Follow the README present inside each of them to get the complete system live and running.
 
+- List of APIs exposed: https://documenter.getpostman.com/view/25366393/2s9YJexLw7
 
 - Create new virtual environment
 ```
